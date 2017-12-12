@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="jquery-cloneable.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.8/summernote.css" rel="stylesheet">
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.8/summernote.js"></script>
+
+    <script>
+        var extractFieldNames = function(fieldName, expression, keepFirstElement) {
+            expression = expression || /([^\]\[]+)/g;
+            keepFirstElement = keepFirstElement || false;
+            var elements = [];
+            while ((searchResult = expression.exec(fieldName))) {
+                elements.push(searchResult[0]);
+            }
+            if (!keepFirstElement && elements.length > 0) elements.shift();
+            return elements;
+        }
+        var attachProperties = function(target, properties, value) {
+            var currentTarget = target;
+            var propertiesNum = properties.length;
+            var lastIndex = propertiesNum - 1;
+            for (var i = 0; i < propertiesNum; ++i) {
+                currentProperty = properties[i];
+                if (currentTarget[currentProperty] === undefined) {
+                    currentTarget[currentProperty] = (i === lastIndex) ? value : {};
+                }
+                currentTarget = currentTarget[currentProperty];
+            }
+        }
+        var convertFormDataToObject = function(form) {
+            var currentField = null;
+            var currentProperties = null;
+            var data = {};
+            var fields = form.serializeArray();
+            console.log(fields);
+            for (var i = 0; i < fields.length; ++i) {
+                currentField = fields[i];
+                currentProperties = extractFieldNames(currentField.name);
+                attachProperties(data, currentProperties, currentField.value);
+            }
+            return data;
+        }
+
+        function get_faqs_names($page, $section, $i) {
+            var $base_name = 'faqs';
+
+            if ($page !== '') {
+                $base_name += '[' + $page + ']';
+            }
+            if ($section !== '') {
+                $base_name += '[' + $section + ']';
+            }
+
+            if ($i !== '') {
+                $base_name += '[' + $i + ']';
+            }
+
+            return $base_name;
+        }
+
+        $(function() {
+            var $modal = $("#myModal");
+
+            $("textarea.answer").summernote({
+                minHeight: 250, // set minimum height of editor
+                maxHeight: 600,
+            });
+
+            $('#tableCloneable').cloneable({
+                events: {
+                    "onCloneAdded": function(e) {
+                        var $i = e.index;
+                        var $page = $("#addnew_faq_page").val();
+                        var $section = $("#addnew_faq_section").val();
+                        $base_name = get_faqs_names($page, $section, $i);
+
+                        e.node.find('[name*="page[]"]').attr("name", $base_name + '[page]');
+                        e.node.find('[name*="section[]"]').attr("name", $base_name + '[section]');
+                        e.node.find('[name*="question[]"]').attr("name", $base_name + '[question]');
+                        e.node.find('[name*="answer[]"]').attr("name", $base_name + '[answer]');
+                    }
+                }
+            });
+
+
+            $("body").on('click', '#importFAQS', function() {
+                $("#remoteURL").attr("disable", 'true');
+                $("#importFAQS").attr("disable", 'true');
+
+                $.getJSON($("#remoteURL").val(), function(data) {
+                    //Clone and add data
+                    $.each(data, function(page, sections) {
+                        if (page == 'global') {
+                            $("#addnew_faq_page").val(page);
+                            $("#addnew_faq_section").val('');
+                            $.each(sections, function(i, faq) {
+                                $('#tableCloneable').cloneable('addClone', {
+                                    data: {
+                                        page: page,
+                                        section: '',
+                                        question: faq['question'],
+                                        answer: faq['answer'],
+                                    }
+                                });
+                            })
+                        } else {
+
+                            $.each(sections, function(section, faqs) {
+                                $("#addnew_faq_page").val(page);
+                                $("#addnew_faq_section").val(section);
+                                $.each(faqs, function(i, faq) {
+                                    $('#tableCloneable').cloneable('addClone', {
+                                        data: {
+                                            page: page,
+                                            section: section,
+                                            question: faq['question'],
+                                            answer: faq['answer'],
+                                        }
+                                    });
+                                })
+                            });
+                        }
+                    })
+                })
+            });
+
+            $('body').on('click', '#buttonAdd', function(e) {
+                var index = $('input#faq_section').val();
+                $('#tableCloneable').cloneable('addClone', {
+                    data: {
+                        'page': $("#addnew_faq_page").val(),
+                        'section': $("#addnew_faq_section").val(),
+                        'question': $("#addnew_faq_question").val(),
+                        'answer': $("#addnew_faq_answer").val(),
+                    }
+                });
+            });
+
+            $('body').on('click', '.buttonDelete', function(e) {
+                e.preventDefault();
+                var index = $(this).closest('tr').index();
+                $('#tableCloneable').cloneable('removeClone', index);
+            });
+
+            $('body').on('click', '.buttonEdit', function(e) {
+                e.preventDefault();
+                var index = $(this).closest('tr').index();
+                var data = $('#tableCloneable').cloneable('getData', index);
+                console.log(data);
+                $modal.find('input[name="index"]').val(index)
+
+                $("#myModal #faq_page").val(data.page);
+                $("#myModal #faq_section").val(data.section);
+                $("#myModal #question").val(data.question);
+                $("#myModal #answer").summernote('code', data.answer);
+                $modal.modal('show');
+            });
+
+            $('body').on('click', '#buttonSave', function(e) {
+                e.preventDefault();
+                $modal.modal('hide');
+
+                var index = parseInt($modal.find('input[name="index"]').val());
+                var $page = $("#myModal #faq_page").val();
+                var $section = $("#myModal #faq_section").val();
+                $base_name = get_faqs_names($page, $section, index);
+                var $pgk = $base_name + "[page]";
+                var $sk = $base_name + "[section]";
+                var $qk = $base_name + "[question]";
+                var $ak = $base_name + "[answer]";
+
+
+                var data = {
+                    [$pgk]: $("#myModal #faq_page").val(),
+                    [$sk]: $("#myModal #faq_section").val(),
+                    [$qk]: $("#myModal #question").val(),
+                    [$ak]: $("#myModal #answer").val(),
+                };
+
+                $('#tableCloneable').cloneable('setData', {
+                    index: index,
+                    data: data
+                });
+            });
+
+            $("body").on('click', '#genJSON', function() {
+                $(' [name*="[page]"], [name*="[section]"]').each(function() {
+                    $(this).attr("data-name", $(this).attr("name")).attr("name", '');
+                });
+
+                var $f = $("#tableCloneable :input");
+                var $d = convertFormDataToObject($f);
+
+                $("#outout").find('textarea').html(JSON.stringify($d));
+                $("#outout").modal('show');
+
+                $(' [data-name*="[page], [name*="[section]"]"]').each(function() {
+                    $(this).attr("name", $(this).attr("data-name")).attr("data-name", '');
+                });
+            })
+        });
+
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>VSP FAQ Generator</h1>
+        <br/>
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                    <div class="panel panel-default">
+                        <div class="panel-heading" role="tab" id="headingOne">
+                            <h4 class="panel-title">
+                                <a role="button" data-toggle="collapse" data-parent="#accordion" href="#addNewForm" aria-expanded="true" aria-controls="addNewForm">Add New</a>
+                            </h4>
+                        </div>
+                        <div id="addNewForm" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                            <div class="panel-body">
+                                <table class="table table-condensed table-hover">
+                                    <tr>
+                                        <td>
+                                            <div class="form-group"><input id="addnew_faq_page" class="form-control" type="text" placeholder="Page Slug" /></div>
+                                        </td>
+
+                                        <td>
+                                            <div class="form-group"><input id="addnew_faq_section" class="form-control" type="text" placeholder="Section Slug" /></div>
+                                        </td>
+
+                                        <td>
+                                            <div class="form-group"><input id="addnew_faq_question" class="form-control" type="text" placeholder="Question" /></div>
+                                        </td>
+                                        <td class="text-center"><button id="buttonAdd" class="btn btn-primary btn-md">Add +</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:50%;" colspan="4">
+                                            <div class="form-group"><textarea class="answer form-control" id="addnew_faq_answer"></textarea></div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <div class="col-xs-12">
+                <div class="panel-group" id="accordion2" role="tablist" aria-multiselectable="true">
+                    <div class="panel panel-default">
+                        <div class="panel-heading" role="tab" id="headingOne">
+                            <h4 class="panel-title">
+                                <a role="button" data-toggle="collapse" data-parent="#accordion2" href="#toolsOPS" aria-expanded="true" aria-controls="toolsOPS">Tools</a>
+                            </h4>
+                        </div>
+                        <div id="toolsOPS" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+                            <div class="panel-body text-center">
+                                <div class="form-group">
+                                    <div class="col-md-8">
+                                        <input id="remoteURL" name="remoteURL" placeholder="Import Faq" class="form-control input-md" type="text">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button id="importFAQS" type="button" class="btn btn-secondary"><i class="icon-plus icon-white"></i> Import</button>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button id="genJSON" type="button" class="btn btn-success"><i class="icon-plus icon-white"></i> Gen Json</button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+
+
+        <br/>
+        <div class="row">
+            <div class="col-xs-12">
+                <table id="tableCloneable" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Page</th>
+                            <th>Section</th>
+                            <th>Question</th>
+                            <th>Answer</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr class="model">
+                            <td>
+                                <div class="view" name="page[]"></div>
+                                <div class="hidden hide"><input name="page[]" /></div>
+                            </td>
+                            <td>
+                                <div class="view" name="section[]"></div>
+                                <div class="hidden hide"><input name="section[]" /></div>
+                            </td>
+                            <td>
+                                <div class="view" name="question[]"></div>
+                                <div class="hidden hide"><input name="question[]" /></div>
+                            </td>
+                            <td>
+                                <div class="view" name="answer[]"></div>
+                                <div class="hidden hide"><textarea name="answer[]"></textarea></div>
+                            </td>
+                            <td>
+                                <button type="button" class="buttonEdit btn btn-primary input-block-level" tittle="Edit"><i class="icon-pencil icon-white"></i> Edit</button>
+                                <button type="button" class="btn btn-danger buttonDelete input-block-level"><i class="icon-trash icon-white"></i> Delete</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Modal title</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <input name="index" type="hidden" />
+                        <input id="faq_page" name="faq_page" placeholder="placeholder" class="form-control input-md" type="hidden" />
+                        <input id="faq_section" name="faq_section" placeholder="placeholder" class="form-control input-md" type="hidden" />
+
+
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <input id="question" name="question" placeholder="Question" class="form-control input-md" type="text" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <textarea class="form-control answer" id="answer" name="textarea"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" id="buttonSave" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="outout" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">JSON Output</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="json_output"><textarea style="width: 100%;min-height: 250px;"></textarea></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" id="buttonSave" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
