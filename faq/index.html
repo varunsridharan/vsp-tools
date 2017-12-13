@@ -4,12 +4,12 @@
 <head>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <script src="../modules/jquery/jquery-2.2.4.min.js"></script>
-    <script src="../modules/bootstrap/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="jquery-cloneable.js"></script>
-    <link href="../modules/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../modules/jq-summernote/summernote.css" rel="stylesheet">
-    <script src="../modules/jq-summernote/summernote.js"></script>
+    <script src="https://varunsridharan.github.io/vsp-tools/modules/jquery/jquery-2.2.4.min.js"></script>
+    <script src="https://varunsridharan.github.io/vsp-tools/modules/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://varunsridharan.github.io/vsp-tools/faq/jquery-cloneable.js"></script>
+    <link href="https://varunsridharan.github.io/vsp-tools/modules/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://varunsridharan.github.io/vsp-tools/modules/jq-summernote/summernote.css" rel="stylesheet">
+    <script src="https://varunsridharan.github.io/vsp-tools/modules/jq-summernote/summernote.js"></script>
 
     <script>
         var extractFieldNames = function(fieldName, expression, keepFirstElement) {
@@ -39,7 +39,7 @@
             var currentProperties = null;
             var data = {};
             var fields = form.serializeArray();
-            console.log(fields);
+
             for (var i = 0; i < fields.length; ++i) {
                 currentField = fields[i];
                 currentProperties = extractFieldNames(currentField.name);
@@ -81,10 +81,10 @@
                         var $section = $("#addnew_faq_section").val();
                         $base_name = get_faqs_names($page, $section, $i);
 
-                        e.node.find('[name*="page[]"]').attr("name", $base_name + '[page]');
-                        e.node.find('[name*="section[]"]').attr("name", $base_name + '[section]');
-                        e.node.find('[name*="question[]"]').attr("name", $base_name + '[question]');
-                        e.node.find('[name*="answer[]"]').attr("name", $base_name + '[answer]');
+                        e.node.find(':input[name*="page[]"]').attr("name", $base_name + '[page]');
+                        e.node.find(':input[name*="section[]"]').attr("name", $base_name + '[section]');
+                        e.node.find(':input[name*="question[]"]').attr("name", $base_name + '[question]');
+                        e.node.find(':input[name*="answer[]"]').attr("name", $base_name + '[answer]');
                     }
                 }
             });
@@ -153,13 +153,19 @@
                 e.preventDefault();
                 var index = $(this).closest('tr').index();
                 var data = $('#tableCloneable').cloneable('getData', index);
-                console.log(data);
-                $modal.find('input[name="index"]').val(index)
 
-                $("#myModal #faq_page").val(data.page);
-                $("#myModal #faq_section").val(data.section);
-                $("#myModal #question").val(data.question);
-                $("#myModal #answer").summernote('code', data.answer);
+                $modal.find('input[name="index"]').val(index);
+                console.log(data);
+                if (data.page !== undefined) {
+
+                    $("#myModal #faq_page").val(data.page);
+                    $("#myModal #faq_section").val(data.section);
+                    $("#myModal #question").val(data.question);
+                    $("#myModal #answer").summernote('code', data.answer);
+                } else {
+                    console.log("ERRRR");
+                }
+
                 $modal.modal('show');
             });
 
@@ -182,6 +188,10 @@
                     [$sk]: $("#myModal #faq_section").val(),
                     [$qk]: $("#myModal #question").val(),
                     [$ak]: $("#myModal #answer").val(),
+                    "page": $("#myModal #faq_page").val(),
+                    "section": $("#myModal #faq_section").val(),
+                    "question": $("#myModal #question").val(),
+                    "answer": $("#myModal #answer").val(),
                 };
 
                 $('#tableCloneable').cloneable('setData', {
@@ -191,7 +201,7 @@
             });
 
             $("body").on('click', '#genJSON', function() {
-                $(' [name*="[page]"], [name*="[section]"]').each(function() {
+                $(' [name*="page"], [name*="section"]').each(function() {
                     $(this).attr("data-name", $(this).attr("name")).attr("name", '');
                 });
 
@@ -201,7 +211,7 @@
                 $("#outout").find('textarea').html(JSON.stringify($d));
                 $("#outout").modal('show');
 
-                $(' [data-name*="[page], [name*="[section]"]"]').each(function() {
+                $(' [name*="page"], [name*="section"]').each(function() {
                     $(this).attr("name", $(this).attr("data-name")).attr("data-name", '');
                 });
             })
