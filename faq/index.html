@@ -204,16 +204,18 @@
                 $(' [name*="page"], [name*="section"]').each(function() {
                     $(this).attr("data-name", $(this).attr("name")).attr("name", '');
                 });
-
                 var $f = $("#tableCloneable :input");
+                $(' [data-name*="page"], [data-name*="section"]').each(function() {
+                    $(this).attr("name", $(this).attr("data-name")).attr("data-name", '');
+                });
+
+                console.log($f);
                 var $d = convertFormDataToObject($f);
 
                 $("#outout").find('textarea').html(JSON.stringify($d));
                 $("#outout").modal('show');
 
-                $(' [name*="page"], [name*="section"]').each(function() {
-                    $(this).attr("name", $(this).attr("data-name")).attr("data-name", '');
-                });
+
             })
         });
 
