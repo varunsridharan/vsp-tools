@@ -1,0 +1,3 @@
+[submodule "modules/summernote"]
+	path = modules/summernote
+	url = https://github.com/summernote/summernote/
